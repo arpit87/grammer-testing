@@ -19,7 +19,7 @@ function App() {
 		console.log(text);
 		try {
 			const res = await axios.post(
-				`http://34.64.207.142/api/v1/check-text`,
+				"https://staging.grammar-check.vani.coach/api/v1/check-text",
 				{
 					text: text,
 				}
