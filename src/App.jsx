@@ -1,54 +1,35 @@
 import { useState } from "react";
 import axios from "axios";
 import "./App.css";
+import { Oval } from "react-loader-spinner";
 
 function App() {
 	const [text, setText] = useState("");
-	const [results2, setResults2] = useState([]);
-	const [results3, setResults3] = useState([]);
-
-	// ======= trinka API ======= //
-	// const apiUrl =
-	// 	"https://api-platform.trinka.ai/api/v2/plugin/check/paragraph";
-
-	// const data = {
-	// 	paragraph: "Wood a anatural material used of indoor environment.",
-	// 	language: "US",
-	// 	style_guide: "",
-	// 	is_sensitive_data: false,
-	// };
-
-	// const headers = {
-	// 	"x-api-key": "pHrj80LSWG6F2K6m8niBH3YH1Eax2URI3OHbvdBH",
-	// 	"Content-Type": "application/json",
-	// };
-	// ======= //
+	const [trinka, setTrinka] = useState({});
+	const [textgears, setTextgears] = useState({});
+	const [languagetool, setLanguagetool] = useState({});
+	const [gramformer, setGramformer] = useState({});
+	const [loading, setLoading] = useState(false);
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
+		setLoading(true);
 		console.log(text);
 		try {
-			// ======== Textgears API ======== //
-			const res2 = await axios.post(
-				`https://api.textgears.com/grammar?key=${
-					import.meta.env.VITE_TEXTGEARS_API_KEY
-				}&text=${text}`
+			const res = await axios.post(
+				`http://34.64.207.142/api/v1/check-text`,
+				{
+					text: text,
+				}
 			);
-			setResults2(res2.data);
-
-			// ======= languagetool API ======= //\
-			const res3 = await axios.post(
-				`https://api.languagetool.org/v2/check?text=${text}&language=en-US`
-			);
-			setResults3(res3.data);
-
-			// ======= Trinka API ======= //
-			// const res = await axios.post(apiUrl, data, {
-			// 	headers: headers,
-			// });
-			console.log(res3.data);
+			setTrinka(res.data.trinka);
+			setTextgears(res.data.textgears);
+			setLanguagetool(res.data.languagetool);
+			setGramformer(res.data.gramformer);
 		} catch (error) {
 			console.log(error);
+		} finally {
+			setLoading(false);
 		}
 	};
 
@@ -66,19 +47,92 @@ function App() {
 					/>
 				</div>
 				<div>
-					<button className="btn">Submit</button>
+					<button className="btn" type="submit">
+						Submit
+						{loading ? (
+							<Oval color="#fff" height={20} width={20} />
+						) : (
+							""
+						)}
+					</button>
 				</div>
 			</form>
 			<br />
 			<div className="results">
-				{results2?.status && (
+				{trinka?.status && (
+					<div>
+						<h2>Results (Trinka API)</h2>
+						<div className="errors">
+							{trinka.response.length === 0 && (
+								<p>No errors found!</p>
+							)}
+							{trinka.response.map((error, index) => (
+								<div
+									key={index}
+									className={index % 2 === 0 ? "even" : "odd"}
+								>
+									<p>
+										<strong>Sentence {index + 1}: </strong>
+										{error.sentence}
+									</p>
+									{error.sentence_result.map(
+										(result, idx) => (
+											<div
+												key={idx}
+												style={{
+													paddingLeft: "15px",
+												}}
+											>
+												<p>
+													<strong>
+														Wrong Part {idx + 1}:{" "}
+													</strong>
+													{result.covered_text}
+												</p>
+												{result.output.map(
+													(output, i) => (
+														<div
+															key={i}
+															style={{
+																paddingLeft:
+																	"15px",
+															}}
+														>
+															<p>
+																<strong>
+																	Suggested
+																	Corrections{" "}
+																	{i + 1}:{" "}
+																</strong>
+																{
+																	output.revised_text
+																}
+															</p>
+															<p>
+																<strong>
+																	Comment:{" "}
+																</strong>
+																{output.comment}
+															</p>
+														</div>
+													)
+												)}
+											</div>
+										)
+									)}
+								</div>
+							))}
+						</div>
+					</div>
+				)}
+				{textgears?.status && (
 					<div>
 						<h2>Results (TextGears API)</h2>
 						<div className="errors">
-							{results2.response.errors.length === 0 && (
+							{textgears.response.errors.length === 0 && (
 								<p>No errors found!</p>
 							)}
-							{results2.response.errors.map((error, index) => (
+							{textgears.response.errors.map((error, index) => (
 								<div
 									key={error.id}
 									className={index % 2 === 0 ? "even" : "odd"}
@@ -112,14 +166,14 @@ function App() {
 						</div>
 					</div>
 				)}
-				{results3?.matches.length != 0 && (
+				{languagetool?.matches && (
 					<div>
 						<h2>Results (LanguageTool API)</h2>
 						<div className="errors">
-							{results3.matches.length === 0 && (
+							{languagetool.matches.length === 0 && (
 								<p>No errors found!</p>
 							)}
-							{results3.matches.map((error, index) => (
+							{languagetool.matches.map((error, index) => (
 								<div
 									key={index}
 									className={index % 2 === 0 ? "even" : "odd"}
@@ -150,6 +204,55 @@ function App() {
 									</p>
 								</div>
 							))}
+						</div>
+					</div>
+				)}
+				{gramformer[0].edits.length > 0 && (
+					<div>
+						<h2>Results (Gramformer API)</h2>
+						<div className="errors">
+							{gramformer[0].edits.length === 0 && (
+								<p>No errors found!</p>
+							)}
+							{gramformer[0].edits.length && (
+								<div>
+									<p>
+										<strong>Corrected Text: </strong>
+										{gramformer[0].corrected}
+									</p>
+									{gramformer[0].edits.map((edit, idx) => (
+										<div
+											key={idx}
+											className={
+												idx % 2 === 0 ? "even" : "odd"
+											}
+										>
+											<p>
+												<strong>Error Type: </strong>
+												{edit[0]}
+											</p>
+											<p>
+												<strong>Error: </strong>
+												{edit[1]}{" "}
+												<strong>&nbsp; At: </strong>
+												{edit[2] +
+													", " +
+													edit[3] +
+													" word position"}
+											</p>
+											<p>
+												<strong>Correction: </strong>
+												{edit[4]}{" "}
+												<strong>&nbsp; At: </strong>
+												{edit[5] +
+													", " +
+													edit[6] +
+													" word position"}
+											</p>
+										</div>
+									))}
+								</div>
+							)}
 						</div>
 					</div>
 				)}
